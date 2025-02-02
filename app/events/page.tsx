@@ -1,0 +1,3 @@
+- Upcoming events calendar
+- Event details and volunteer assignments
+- Event creation/editing form 

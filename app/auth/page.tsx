@@ -1,0 +1,3 @@
+- Login/Signup flow
+- Role-based access (Admin, Coordinator, Volunteer)
+- Protected routes 
