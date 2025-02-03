@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '@/contexts/auth-context'
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
@@ -12,6 +13,24 @@ const navigation = [
 
 export function NavBar() {
   const pathname = usePathname()
+  const { user, loading, signOut } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="bg-primary-600">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <h1 className="text-xl font-bold text-white">Volunteer CRM</h1>
+              </div>
+            </div>
+            <div className="animate-pulse bg-primary-500 h-8 w-20 rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-primary-600">
@@ -41,6 +60,31 @@ export function NavBar() {
                 })}
               </div>
             </div>
+          </div>
+          <div className="flex items-center">
+            {user ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="text-white hover:bg-primary-500 rounded-md px-3 py-2 text-sm font-medium"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => signOut()}
+                  className="text-white hover:bg-primary-500 rounded-md px-3 py-2 text-sm font-medium"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="text-white hover:bg-primary-500 rounded-md px-3 py-2 text-sm font-medium"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
       </div>
