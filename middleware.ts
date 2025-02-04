@@ -10,41 +10,43 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Define public paths that don't require authentication
-  const publicPaths = ['/auth/signin', '/auth/signup', '/auth/verify', '/auth/check-email', '/auth/error']
-  const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
+  // Get user type from session
+  const userType = session?.user?.user_metadata?.type
 
-  // Handle /auth/login redirect first
-  if (request.nextUrl.pathname === '/auth/login') {
-    return NextResponse.redirect(new URL('/auth/signin', request.url))
-  }
+  // Define public paths
+  const publicPaths = [
+    '/auth/volunteer/signin',
+    '/auth/volunteer/signup',
+    '/auth/organization/signin',
+    '/auth/organization/signup',
+    '/auth/verify',
+    '/auth'
+  ]
+  const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
 
   // If user is not signed in and trying to access a protected route
   if (!session && !isPublicPath) {
     return NextResponse.redirect(new URL('/auth/signin', request.url))
   }
 
-  // If user is signed in and trying to access auth pages
-  if (session && isPublicPath) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  // Protected routes handling
-  if (
-    request.nextUrl.pathname.startsWith('/admin') ||
-    request.nextUrl.pathname.startsWith('/profile')
-  ) {
-    if (!session) {
-      // If user is not signed in, redirect to login
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+  // Redirect based on user type
+  if (session) {
+    // Organization users shouldn't access volunteer routes
+    if (userType === 'organization' && request.nextUrl.pathname.startsWith('/volunteer-dashboard')) {
+      return NextResponse.redirect(new URL('/org-dashboard', request.url))
     }
 
-    // For admin routes, check if user has admin role
-    if (request.nextUrl.pathname.startsWith('/admin')) {
-      const role = session.user?.user_metadata?.role
-      if (role !== 'admin') {
-        // If user is not an admin, redirect to home
-        return NextResponse.redirect(new URL('/', request.url))
+    // Volunteers shouldn't access organization routes
+    if (userType === 'volunteer' && request.nextUrl.pathname.startsWith('/org-dashboard')) {
+      return NextResponse.redirect(new URL('/volunteer-dashboard', request.url))
+    }
+
+    // Redirect to appropriate dashboard after login
+    if (request.nextUrl.pathname === '/') {
+      if (userType === 'organization') {
+        return NextResponse.redirect(new URL('/org-dashboard', request.url))
+      } else if (userType === 'volunteer') {
+        return NextResponse.redirect(new URL('/volunteer-dashboard', request.url))
       }
     }
   }
@@ -53,14 +55,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 } 
