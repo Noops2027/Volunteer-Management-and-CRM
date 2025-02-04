@@ -6,8 +6,11 @@ import { type ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/ui/data-table'
 import type { Volunteer } from '@/types/volunteer'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { UserCircle } from 'lucide-react'
 
-const columns: ColumnDef<Volunteer>[] = [
+export const columns: ColumnDef<Volunteer>[] = [
   {
     accessorKey: 'name',
     header: 'Name',
@@ -57,6 +60,24 @@ const columns: ColumnDef<Volunteer>[] = [
       )
     },
   },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const volunteer = row.original
+
+      return (
+        <div className="flex items-center gap-2">
+          <Link href={`/volunteers/${volunteer.id}/profile`}>
+            <Button variant="ghost" size="sm">
+              <UserCircle className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
+          </Link>
+          {/* ... other actions ... */}
+        </div>
+      )
+    }
+  }
 ]
 
 export function VolunteerList() {

@@ -1,134 +1,125 @@
 'use client'
 
-import { useState } from 'react'
-import { useAuth } from '@/contexts/auth-context'
-import { supabase } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card } from '@/components/ui/card'
+import { PersonalInfoForm } from '@/components/volunteers/profile/personal-info-form'
+import { EmergencyContactsForm } from '@/components/volunteers/profile/emergency-contacts-form'
+import { CertificationsForm } from '@/components/volunteers/profile/certifications-form'
+import { BackgroundChecksForm } from '@/components/volunteers/profile/background-checks-form'
+import { PreferencesForm } from '@/components/volunteers/profile/preferences-form'
+import { useToast } from '@/contexts/toast-context'
+import type { Volunteer } from '@/types/volunteer'
 
-interface ProfileFormData {
-  first_name: string
-  last_name: string
-  phone: string
-  bio: string
-}
+export default function MyProfilePage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [volunteerId, setVolunteerId] = useState<string | null>(null)
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+  const { showToast } = useToast()
 
-export default function ProfilePage() {
-  const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  const [formData, setFormData] = useState<ProfileFormData>({
-    first_name: user?.user_metadata?.first_name || '',
-    last_name: user?.user_metadata?.last_name || '',
-    phone: user?.user_metadata?.phone || '',
-    bio: user?.user_metadata?.bio || '',
-  })
+  useEffect(() => {
+    async function getProfile() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setMessage(null)
+      const { data: volunteer } = await supabase
+        .from('volunteers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
 
-    const { error } = await supabase.auth.updateUser({
-      data: formData
-    })
-
-    if (error) {
-      setMessage({ type: 'error', text: error.message })
-    } else {
-      setMessage({ type: 'success', text: 'Profile updated successfully' })
+      if (volunteer) {
+        setVolunteerId(volunteer.id)
+      }
     }
-    setLoading(false)
+
+    getProfile()
+  }, [supabase, router])
+
+  async function handleUpdate(section: string, data: Partial<Volunteer>) {
+    if (!volunteerId) return
+
+    setIsLoading(true)
+    try {
+      const { error } = await supabase
+        .from('volunteers')
+        .update(data)
+        .eq('id', volunteerId)
+
+      if (error) throw error
+
+      showToast(`${section} updated successfully`, 'success')
+      router.refresh()
+    } catch (error: any) {
+      showToast(error.message || `Failed to update ${section}`, 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!volunteerId) {
+    return <div>Loading...</div>
   }
 
   return (
-    <>
-      <div className="md:flex md:items-center md:justify-between mb-8">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-            Profile Settings
-          </h2>
-        </div>
+    <div className="container py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">My Profile</h1>
       </div>
 
-      <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
-        <form onSubmit={handleSubmit}>
-          <div className="px-4 py-6 sm:p-8">
-            {message && (
-              <div className={`mb-4 p-4 rounded-md ${
-                message.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-              }`}>
-                {message.text}
-              </div>
-            )}
+      <Card className="p-6">
+        <Tabs defaultValue="personal" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="personal">Personal Info</TabsTrigger>
+            <TabsTrigger value="emergency">Emergency Contacts</TabsTrigger>
+            <TabsTrigger value="certifications">Certifications</TabsTrigger>
+            <TabsTrigger value="background">Background Checks</TabsTrigger>
+            <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          </TabsList>
 
-            <div className="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              <div className="sm:col-span-3">
-                <label htmlFor="first_name" className="block text-sm font-medium leading-6 text-gray-900">
-                  First name
-                </label>
-                <input
-                  type="text"
-                  name="first_name"
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+          <TabsContent value="personal" className="mt-6">
+            <PersonalInfoForm 
+              volunteerId={volunteerId}
+              onSubmit={(data) => handleUpdate('Personal Info', data)}
+              isLoading={isLoading}
+            />
+          </TabsContent>
 
-              <div className="sm:col-span-3">
-                <label htmlFor="last_name" className="block text-sm font-medium leading-6 text-gray-900">
-                  Last name
-                </label>
-                <input
-                  type="text"
-                  name="last_name"
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+          <TabsContent value="emergency" className="mt-6">
+            <EmergencyContactsForm 
+              volunteerId={volunteerId}
+              onSubmit={(data) => handleUpdate('Emergency Contacts', data)}
+            />
+          </TabsContent>
 
-              <div className="sm:col-span-3">
-                <label htmlFor="phone" className="block text-sm font-medium leading-6 text-gray-900">
-                  Phone number
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+          <TabsContent value="certifications" className="mt-6">
+            <CertificationsForm
+              volunteerId={volunteerId}
+              onSubmit={(data) => handleUpdate('Certifications', data)}
+            />
+          </TabsContent>
 
-              <div className="col-span-full">
-                <label htmlFor="bio" className="block text-sm font-medium leading-6 text-gray-900">
-                  Bio
-                </label>
-                <textarea
-                  id="bio"
-                  name="bio"
-                  rows={3}
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-x-6 border-t border-gray-900/10 px-4 py-4 sm:px-8">
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </>
+          <TabsContent value="background" className="mt-6">
+            <BackgroundChecksForm
+              volunteerId={volunteerId}
+              onSubmit={(data) => handleUpdate('Background Checks', data)}
+            />
+          </TabsContent>
+
+          <TabsContent value="preferences" className="mt-6">
+            <PreferencesForm
+              volunteerId={volunteerId}
+              onSubmit={(data) => handleUpdate('Preferences', data)}
+            />
+          </TabsContent>
+        </Tabs>
+      </Card>
+    </div>
   )
 } 

@@ -13,7 +13,13 @@ import { PreferencesForm } from '@/components/volunteers/profile/preferences-for
 import { useToast } from '@/contexts/toast-context'
 import type { Volunteer } from '@/types/volunteer'
 
-export default function VolunteerProfilePage({ params }: { params: { id: string } }) {
+interface ProfilePageProps {
+  params: {
+    id: string
+  }
+}
+
+export default function ProfilePage({ params }: ProfilePageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const supabase = createClientComponentClient()
@@ -39,35 +45,58 @@ export default function VolunteerProfilePage({ params }: { params: { id: string 
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Volunteer Profile</h1>
-      
-      <Tabs defaultValue="personal" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="personal">Personal Info</TabsTrigger>
-          <TabsTrigger value="emergency">Emergency Contacts</TabsTrigger>
-          <TabsTrigger value="certifications">Certifications</TabsTrigger>
-          <TabsTrigger value="checks">Background Checks</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-        </TabsList>
+    <div className="container py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Volunteer Profile</h1>
+      </div>
 
-        <TabsContent value="personal">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PersonalInfoForm 
-                volunteerId={params.id} 
-                onSubmit={(data) => handleUpdate('Personal Info', data)}
-                isLoading={isLoading}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <Card className="p-6">
+        <Tabs defaultValue="personal" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="personal">Personal Info</TabsTrigger>
+            <TabsTrigger value="emergency">Emergency Contacts</TabsTrigger>
+            <TabsTrigger value="certifications">Certifications</TabsTrigger>
+            <TabsTrigger value="background">Background Checks</TabsTrigger>
+            <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          </TabsList>
 
-        {/* Add other TabsContent components for each section */}
-      </Tabs>
+          <TabsContent value="personal" className="mt-6">
+            <PersonalInfoForm 
+              volunteerId={params.id}
+              onSubmit={(data) => handleUpdate('Personal Info', data)}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+
+          <TabsContent value="emergency" className="mt-6">
+            <EmergencyContactsForm 
+              volunteerId={params.id}
+              onSubmit={(data) => handleUpdate('Emergency Contacts', data)}
+            />
+          </TabsContent>
+
+          <TabsContent value="certifications" className="mt-6">
+            <CertificationsForm
+              volunteerId={params.id} 
+              onSubmit={(data) => handleUpdate('Certifications', data)}
+            />
+          </TabsContent>
+
+          <TabsContent value="background" className="mt-6">
+            <BackgroundChecksForm
+              volunteerId={params.id}
+              onSubmit={(data) => handleUpdate('Background Checks', data)}
+            />
+          </TabsContent>
+
+          <TabsContent value="preferences" className="mt-6">
+            <PreferencesForm
+              volunteerId={params.id}
+              onSubmit={(data) => handleUpdate('Preferences', data)}
+            />
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   )
 } 

@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useEffect, useState } from 'react'
 import { UserMenu } from '@/components/auth/user-menu'
-import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
@@ -28,12 +27,14 @@ export function NavBar() {
   }, [supabase.auth])
 
   return (
-    <div className="bg-primary-600">
+    <div className="bg-white border-b">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-white">Volunteer CRM</h1>
+              <div className="bg-primary p-2 rounded-lg">
+                <span className="font-bold text-white">VCM</span>
+              </div>
             </div>
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
@@ -45,8 +46,8 @@ export function NavBar() {
                       href={item.href}
                       className={`${
                         isActive
-                          ? 'bg-primary-700 text-white'
-                          : 'text-white hover:bg-primary-500 hover:text-white'
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-gray-600 hover:text-primary hover:bg-primary/5'
                       } rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150`}
                     >
                       {item.name}
@@ -56,18 +57,40 @@ export function NavBar() {
               </div>
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             {email ? (
               <UserMenu email={email} />
             ) : (
               <Link
                 href="/auth/signin"
-                className="text-white hover:bg-primary-500 rounded-md px-3 py-2 text-sm font-medium"
+                className="text-gray-600 hover:text-primary hover:bg-primary/5 rounded-md px-3 py-2 text-sm font-medium transition-colors"
               >
                 Sign in
               </Link>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      <div className="md:hidden">
+        <div className="space-y-1 px-2 pb-3 pt-2">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`${
+                  isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-gray-600 hover:text-primary hover:bg-primary/5'
+                } block rounded-md px-3 py-2 text-base font-medium`}
+              >
+                {item.name}
+              </Link>
+            )
+          })}
         </div>
       </div>
     </div>

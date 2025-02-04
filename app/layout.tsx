@@ -3,6 +3,7 @@ import { NavBar } from '@/components/layout/nav-bar'
 import { AuthProvider } from '@/contexts/auth-context'
 import { AuthWrapper } from '@/components/auth/auth-wrapper'
 import { Providers } from './providers'
+import { Header } from '@/components/layout/header'
 
 export default function RootLayout({
   children,
@@ -16,6 +17,7 @@ export default function RootLayout({
           <AuthProvider>
             <AuthWrapper>
               <div className="min-h-full">
+                <Header />
                 <NavBar />
                 <div className="py-6">
                   <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
