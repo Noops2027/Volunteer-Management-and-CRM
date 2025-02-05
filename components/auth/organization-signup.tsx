@@ -20,49 +20,25 @@ export function OrganizationSignUp() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const email = formData.get('email') as string
-      const password = formData.get('password') as string
-      const organizationName = formData.get('organizationName') as string
-
-      // Create user account
-      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.get('email') as string,
+        password: formData.get('password') as string,
         options: {
           data: {
             type: 'organization',
-            organization_name: organizationName
+            organization_name: formData.get('organizationName')
           }
         }
       })
 
-      if (signUpError) throw signUpError
+      if (error) throw error
 
-      // Create organization
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: organizationName,
-          contact_email: email
-        })
-        .select()
-        .single()
-
-      if (orgError) throw orgError
-
-      // Add user as organization admin
-      const { error: memberError } = await supabase
-        .from('organization_members')
-        .insert({
-          organization_id: org.id,
-          user_id: user!.id,
-          role: 'admin'
-        })
-
-      if (memberError) throw memberError
-
-      showToast('Registration successful! Please check your email to verify your account.', 'success')
-      router.push('/auth/check-email')
+      if (data.user) {
+        router.push('/dashboard')
+        router.refresh()
+      } else {
+        router.push('/auth/check-email')
+      }
     } catch (error: any) {
       showToast(error.message, 'error')
     } finally {

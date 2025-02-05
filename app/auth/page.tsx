@@ -31,7 +31,7 @@ export default function AuthChoicePage() {
           </div>
           <div className="space-y-3">
             <Link href="/auth/volunteer/signin" className="w-full">
-              <Button variant="outline" className="w-full">Sign In</Button>
+              <Button variant="outline" className="w-full">Sign In as Volunteer</Button>
             </Link>
             <Link href="/auth/volunteer/signup" className="w-full">
               <Button className="w-full">Create Volunteer Account</Button>
@@ -52,7 +52,7 @@ export default function AuthChoicePage() {
           </div>
           <div className="space-y-3">
             <Link href="/auth/organization/signin" className="w-full">
-              <Button variant="outline" className="w-full">Sign In</Button>
+              <Button variant="outline" className="w-full">Sign In as Organization</Button>
             </Link>
             <Link href="/auth/organization/signup" className="w-full">
               <Button className="w-full">Register Organization</Button>

@@ -23,16 +23,65 @@ export default function VolunteerSignInPage() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const { error } = await supabase.auth.signInWithPassword({
-        email: formData.get('email') as string,
-        password: formData.get('password') as string,
+      const email = formData.get('email') as string
+      const password = formData.get('password') as string
+
+      // Attempt to sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
 
-      if (error) throw error
+      if (error) {
+        if (error.message === 'Invalid login credentials') {
+          throw new Error('Incorrect email or password')
+        }
+        if (error.message === 'Email not confirmed') {
+          showToast('Please verify your email before signing in', 'error')
+          router.push(`/auth/check-email?email=${encodeURIComponent(email)}`)
+          return
+        }
+        throw error
+      }
 
+      if (!data.user) {
+        throw new Error('No user data returned')
+      }
+
+      // Debug logs
+      console.log('Sign in successful')
+      console.log('User metadata:', data.user.user_metadata)
+      console.log('User type:', data.user.user_metadata?.type)
+
+      // First check user metadata
+      const userType = data.user.user_metadata?.type
+
+      if (userType === 'volunteer') {
+        showToast('Successfully signed in!', 'success')
+        router.push('/volunteer-dashboard')
+        router.refresh()
+        return
+      }
+
+      // If no type in metadata, check profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('type')
+        .eq('id', data.user.id)
+        .single()
+
+      console.log('Profile data:', profile)
+
+      if (profileError || profile?.type !== 'volunteer') {
+        throw new Error('This account is not registered as a volunteer')
+      }
+
+      // If we get here, the profile confirms this is a volunteer
+      showToast('Successfully signed in!', 'success')
       router.push('/volunteer-dashboard')
       router.refresh()
     } catch (error: any) {
+      console.error('Sign in error:', error)
       showToast(error.message, 'error')
     } finally {
       setIsLoading(false)

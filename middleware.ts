@@ -12,48 +12,108 @@ export async function middleware(request: NextRequest) {
 
   // Get user type from session
   const userType = session?.user?.user_metadata?.type
+  
+  console.log('Middleware - Current path:', request.nextUrl.pathname)
+  console.log('Middleware - User type:', userType)
+  console.log('Middleware - Session:', !!session)
 
-  // Define public paths
+  // Define public paths that don't require authentication
   const publicPaths = [
+    '/auth',
     '/auth/volunteer/signin',
     '/auth/volunteer/signup',
     '/auth/organization/signin',
     '/auth/organization/signup',
-    '/auth/verify',
-    '/auth'
+    '/auth/callback',
+    '/auth/check-email',
+    '/auth/verify'
   ]
-  const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
+
+  const isPublicPath = publicPaths.some(path => 
+    request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`)
+  )
 
   // If user is not signed in and trying to access a protected route
   if (!session && !isPublicPath) {
-    return NextResponse.redirect(new URL('/auth/signin', request.url))
+    console.log('Middleware - Redirecting to /auth (no session)')
+    return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  // Redirect based on user type
+  // Handle authenticated users
   if (session) {
-    // Organization users shouldn't access volunteer routes
-    if (userType === 'organization' && request.nextUrl.pathname.startsWith('/volunteer-dashboard')) {
-      return NextResponse.redirect(new URL('/org-dashboard', request.url))
+    // Redirect from root
+    if (request.nextUrl.pathname === '/') {
+      if (userType === 'volunteer') {
+        console.log('Middleware - Redirecting volunteer to dashboard')
+        return NextResponse.redirect(new URL('/volunteer-dashboard', request.url))
+      }
+      if (userType === 'organization') {
+        console.log('Middleware - Redirecting organization to dashboard')
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
     }
 
-    // Volunteers shouldn't access organization routes
-    if (userType === 'volunteer' && request.nextUrl.pathname.startsWith('/org-dashboard')) {
+    // Prevent volunteers from accessing organization routes
+    if (userType === 'volunteer' && request.nextUrl.pathname.startsWith('/dashboard')) {
+      console.log('Middleware - Volunteer accessing org route, redirecting')
       return NextResponse.redirect(new URL('/volunteer-dashboard', request.url))
     }
 
-    // Redirect to appropriate dashboard after login
-    if (request.nextUrl.pathname === '/') {
-      if (userType === 'organization') {
-        return NextResponse.redirect(new URL('/org-dashboard', request.url))
-      } else if (userType === 'volunteer') {
-        return NextResponse.redirect(new URL('/volunteer-dashboard', request.url))
-      }
+    // Prevent organizations from accessing volunteer routes
+    if (userType === 'organization' && request.nextUrl.pathname.startsWith('/volunteer-dashboard')) {
+      console.log('Middleware - Org accessing volunteer route, redirecting')
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
+
+  const protectedPaths = {
+    volunteer: {
+      base: '/volunteer-dashboard',
+      allowed: [
+        '/volunteer-dashboard',
+        '/volunteer-dashboard/profile',
+        '/volunteer-dashboard/opportunities',
+        '/volunteer-dashboard/schedule',
+        '/volunteer-dashboard/hours',
+        '/volunteer-dashboard/settings'
+      ]
+    },
+    organization: {
+      base: '/dashboard',
+      allowed: [
+        '/dashboard',
+        '/dashboard/profile',
+        '/dashboard/volunteers',
+        '/dashboard/events',
+        '/dashboard/settings'
+      ]
+    }
+  }
+
+  // Use in middleware
+  if (userType === 'volunteer' && !protectedPaths.volunteer.allowed.includes(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL(protectedPaths.volunteer.base, request.url))
+  }
+
+  // Add more detailed logging
+  console.log({
+    path: request.nextUrl.pathname,
+    userType: userType,
+    hasSession: !!session,
+    isPublicPath: isPublicPath
+  })
 
   return res
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 } 

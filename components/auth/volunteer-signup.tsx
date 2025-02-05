@@ -20,23 +20,41 @@ export function VolunteerSignUp() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const { error } = await supabase.auth.signUp({
-        email: formData.get('email') as string,
-        password: formData.get('password') as string,
+      const email = formData.get('email') as string
+      const password = formData.get('password') as string
+      const name = formData.get('name') as string
+
+      console.log('Starting signup process for:', email)
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             type: 'volunteer',
-            name: formData.get('name')
+            name: name
           }
         }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Signup error details:', error)
+        throw error
+      }
 
-      showToast('Registration successful! Please check your email to verify your account.', 'success')
-      router.push('/auth/check-email')
+      // Log the full response for debugging
+      console.log('Full signup response:', JSON.stringify(data, null, 2))
+
+      if (!data.user?.confirmation_sent_at) {
+        throw new Error('Email confirmation was not sent')
+      }
+
+      showToast('Account created! Please check your email to verify your account.', 'success')
+      router.push(`/auth/check-email?email=${encodeURIComponent(email)}`)
     } catch (error: any) {
-      showToast(error.message, 'error')
+      console.error('Signup error:', error)
+      showToast(error.message || 'Failed to create account', 'error')
     } finally {
       setIsLoading(false)
     }

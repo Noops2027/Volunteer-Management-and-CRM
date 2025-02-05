@@ -23,16 +23,38 @@ export default function OrganizationSignInPage() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.get('email') as string,
         password: formData.get('password') as string,
       })
 
       if (error) throw error
 
-      router.push('/org-dashboard')
+      // Debug logs
+      console.log('Sign in successful')
+      console.log('User metadata:', data.user?.user_metadata)
+
+      // Verify user type
+      const userType = data.user?.user_metadata?.type
+
+      if (userType !== 'organization') {
+        // Double check in profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', data.user?.id)
+          .single()
+
+        if (profileError || profile?.user_type !== 'organization') {
+          throw new Error('This account is not registered as an organization')
+        }
+      }
+
+      showToast('Successfully signed in!', 'success')
+      router.push('/dashboard')
       router.refresh()
     } catch (error: any) {
+      console.error('Sign in error:', error)
       showToast(error.message, 'error')
     } finally {
       setIsLoading(false)
@@ -50,7 +72,7 @@ export default function OrganizationSignInPage() {
             Organization Sign In
           </h1>
           <p className="text-sm text-gray-500 mt-2">
-            Access your organization's dashboard and volunteer management tools
+            Access your organization dashboard
           </p>
         </div>
 
@@ -79,13 +101,12 @@ export default function OrganizationSignInPage() {
 
       {/* Additional context */}
       <div className="mt-6 bg-purple-50 rounded-lg p-4 text-sm text-purple-700">
-        <h3 className="font-medium mb-1">Signing in as an Organization</h3>
+        <h3 className="font-medium mb-1">Need an organization account?</h3>
         <p>
-          Manage your volunteers, create opportunities, and access organization tools.
-          Need to register your organization?{' '}
           <Link href="/auth/organization/signup" className="text-purple-600 hover:underline font-medium">
-            Register here
+            Register your organization
           </Link>
+          {' '}to start managing volunteers and events.
         </p>
       </div>
     </div>
